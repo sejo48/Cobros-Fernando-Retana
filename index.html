@@ -12,10 +12,9 @@
     </script>
     <style>
         .card { border-radius: 16px; transition: all 0.2s; }
-        /* Evitar que el zoom automático de iPhone moleste en los inputs */
         input, select, textarea { font-size: 16px !important; }
-        /* Estilo táctil para botones */
         .btn-touch { min-height: 48px; min-width: 48px; display: flex; align-items: center; justify-content: center; }
+        .history-item:last-child { border-bottom: none; }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen p-3 md:p-8 transition-colors duration-300">
@@ -25,7 +24,7 @@
             <div class="flex justify-between items-start">
                 <div>
                     <h1 class="text-2xl font-bold text-blue-700 dark:text-blue-400">Cobros Fernando Retana</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Gestión de facturas y abonos</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Gestión con Historial de Abonos</p>
                 </div>
                 <button onclick="toggleDarkMode()" class="p-3 bg-gray-200 dark:bg-gray-700 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition btn-touch">
                     <span id="themeIcon">🌙</span>
@@ -36,7 +35,7 @@
             </button>
         </header>
 
-        <!-- Dashboard de Resumen -->
+        <!-- Resumen -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
             <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border-l-4 border-blue-500">
                 <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">Total Facturado</p>
@@ -52,15 +51,12 @@
             </div>
         </div>
 
-        <!-- Lista de Trabajos -->
-        <div id="jobsContainer" class="space-y-4 pb-20">
-            <!-- Los trabajos se cargarán aquí -->
-        </div>
+        <div id="jobsContainer" class="space-y-4 pb-20"></div>
     </div>
 
-    <!-- Modal para Nuevo/Editar Trabajo -->
+    <!-- Modal Nuevo/Editar Trabajo -->
     <div id="jobModal" class="hidden fixed inset-0 bg-black/70 flex items-end md:items-center justify-center p-0 md:p-4 z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-t-3xl md:rounded-2xl p-6 w-full max-w-md shadow-2xl animate-slide-up">
+        <div class="bg-white dark:bg-gray-800 rounded-t-3xl md:rounded-2xl p-6 w-full max-w-md shadow-2xl overflow-y-auto max-h-[90vh]">
             <h2 id="modalTitle" class="text-xl font-bold mb-4 dark:text-white border-b pb-2">Registrar Trabajo</h2>
             <form id="jobForm" class="space-y-4">
                 <input type="hidden" id="editJobId">
@@ -97,6 +93,10 @@
             <form id="paymentForm" class="space-y-4">
                 <input type="hidden" id="currentJobId">
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fecha del Pago</label>
+                    <input type="date" id="paymentDate" required class="w-full mt-1 p-3 border dark:border-gray-600 rounded-xl outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Monto del Abono (₡)</label>
                     <input type="number" id="paymentAmount" step="0.01" required class="w-full mt-1 p-3 border dark:border-gray-600 rounded-xl outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
                 </div>
@@ -109,11 +109,15 @@
     </div>
 
     <script>
-        let jobs = JSON.parse(localStorage.getItem('fernando_cobros')) || [];
+        let jobs = JSON.parse(localStorage.getItem('fernando_cobros_v2')) || [];
 
         function save() {
-            localStorage.setItem('fernando_cobros', JSON.stringify(jobs));
+            localStorage.setItem('fernando_cobros_v2', JSON.stringify(jobs));
             render();
+        }
+
+        function formatCurrency(val) {
+            return '₡' + val.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         function toggleModal(id) {
@@ -122,10 +126,8 @@
         }
 
         function openJobModal(jobId = null) {
-            const modal = document.getElementById('jobModal');
             const title = document.getElementById('modalTitle');
             const form = document.getElementById('jobForm');
-            
             if (jobId) {
                 const job = jobs.find(j => j.id === jobId);
                 title.innerText = "Editar Trabajo";
@@ -140,7 +142,7 @@
                 document.getElementById('editJobId').value = "";
                 document.getElementById('date').valueAsDate = new Date();
             }
-            modal.classList.remove('hidden');
+            toggleModal('jobModal');
         }
 
         function closeJobModal() {
@@ -161,15 +163,15 @@
             }
         }
 
+        // Cargar tema inicial
         if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
-            document.getElementById('themeIcon').innerText = '☀️';
+            if(document.getElementById('themeIcon')) document.getElementById('themeIcon').innerText = '☀️';
         }
 
         document.getElementById('jobForm').onsubmit = (e) => {
             e.preventDefault();
             const editId = document.getElementById('editJobId').value;
-            
             const jobData = {
                 client: document.getElementById('client').value,
                 description: document.getElementById('description').value,
@@ -184,16 +186,16 @@
                 jobs.push({
                     id: Date.now(),
                     ...jobData,
-                    payments: 0
+                    history: []
                 });
             }
-            
             closeJobModal();
             save();
         };
 
         function openPaymentModal(id) {
             document.getElementById('currentJobId').value = id;
+            document.getElementById('paymentDate').valueAsDate = new Date();
             toggleModal('paymentModal');
         }
 
@@ -201,15 +203,21 @@
             e.preventDefault();
             const id = parseInt(document.getElementById('currentJobId').value);
             const amount = parseFloat(document.getElementById('paymentAmount').value);
+            const pDate = document.getElementById('paymentDate').value;
             const job = jobs.find(j => j.id === id);
             
             if (job) {
-                const balance = job.totalAmount - job.payments;
+                const totalPaid = job.history.reduce((sum, p) => sum + p.amount, 0);
+                const balance = job.totalAmount - totalPaid;
                 if (amount > balance + 0.01) {
                     alert('El abono no puede ser mayor al saldo pendiente.');
                     return;
                 }
-                job.payments += amount;
+                job.history.push({
+                    id: Date.now(),
+                    date: pDate,
+                    amount: amount
+                });
                 document.getElementById('paymentForm').reset();
                 toggleModal('paymentModal');
                 save();
@@ -217,78 +225,104 @@
         };
 
         function deleteJob(id) {
-            if (confirm('¿Eliminar este cobro permanentemente?')) {
+            if (confirm('¿Eliminar este cobro y todo su historial?')) {
                 jobs = jobs.filter(j => j.id !== id);
                 save();
             }
         }
 
-        function formatCurrency(val) {
-            return '₡' + val.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        function deletePayment(jobId, paymentId) {
+            if (confirm('¿Eliminar este abono del historial?')) {
+                const job = jobs.find(j => j.id === jobId);
+                job.history = job.history.filter(p => p.id !== paymentId);
+                save();
+            }
         }
 
         function render() {
             const container = document.getElementById('jobsContainer');
             container.innerHTML = '';
-
-            let tBilled = 0, tPaid = 0;
+            let tBilled = 0, tPaidTotal = 0;
 
             if (jobs.length === 0) {
-                container.innerHTML = `<div class="text-center py-12 text-gray-400 italic bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed dark:border-gray-700">No hay registros aún.</div>`;
+                container.innerHTML = `<div class="text-center py-12 text-gray-400 bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed dark:border-gray-700 font-bold">Sin deudas registradas</div>`;
             }
 
             jobs.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(job => {
-                const balance = job.totalAmount - job.payments;
+                const paid = job.history.reduce((sum, p) => sum + p.amount, 0);
+                const balance = job.totalAmount - paid;
                 tBilled += job.totalAmount;
-                tPaid += job.payments;
+                tPaidTotal += paid;
+
+                const isPaid = balance <= 0.01;
 
                 const card = document.createElement('div');
-                card.className = 'bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col gap-5 card';
+                card.className = 'bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col gap-4 card';
                 
-                const isPaid = balance <= 0.01;
+                let historyHtml = '';
+                if (job.history.length > 0) {
+                    historyHtml = `
+                        <div class="mt-2 bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3">
+                            <p class="text-[10px] font-black uppercase text-gray-400 mb-2 border-b dark:border-gray-700 pb-1">Historial de Abonos</p>
+                            <div class="space-y-2">
+                                ${job.history.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(p => `
+                                    <div class="flex justify-between items-center text-sm history-item border-b dark:border-gray-800 pb-2 mb-2">
+                                        <div>
+                                            <span class="font-bold text-green-600 dark:text-green-400">${formatCurrency(p.amount)}</span>
+                                            <span class="text-xs text-gray-500 ml-2">${p.date}</span>
+                                        </div>
+                                        <button onclick="deletePayment(${job.id}, ${p.id})" class="text-red-400 hover:text-red-600 p-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
 
                 card.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
                             <div class="flex items-center gap-2 mb-1">
                                 <h3 class="font-bold text-xl text-gray-800 dark:text-white">${job.client}</h3>
-                                ${isPaid ? '<span class="bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 text-[10px] px-2 py-0.5 rounded-lg font-black uppercase">PAGADO</span>' : '<span class="bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 text-[10px] px-2 py-0.5 rounded-lg font-black uppercase">DEUDA</span>'}
+                                ${isPaid ? '<span class="bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 text-[10px] px-2 py-0.5 rounded-lg font-black">PAGADO</span>' : '<span class="bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 text-[10px] px-2 py-0.5 rounded-lg font-black">DEUDA</span>'}
                             </div>
                             <p class="text-gray-600 dark:text-gray-400 text-base">${job.description}</p>
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-2 font-medium">Factura: ${job.date}</p>
+                            <p class="text-xs text-gray-400 mt-1">Factura: ${job.date}</p>
                         </div>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-4 py-3 border-y dark:border-gray-700">
                         <div>
-                            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Monto Total</p>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold">Monto Total</p>
                             <p class="font-bold text-gray-700 dark:text-gray-200">${formatCurrency(job.totalAmount)}</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Saldo Pendiente</p>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold">Saldo Actual</p>
                             <p class="font-black text-lg ${balance > 0.01 ? 'text-red-500 dark:text-red-400' : 'text-gray-400 dark:text-gray-600'}">${formatCurrency(Math.max(0, balance))}</p>
                         </div>
                     </div>
 
-                    <!-- BOTONES AMPLIOS PARA MÓVIL -->
-                    <div class="flex items-center justify-between gap-4">
-                        <div class="flex gap-4">
-                            <button onclick="openJobModal(${job.id})" class="btn-touch bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center gap-2 px-4 font-bold border border-blue-100 dark:border-blue-900/50 active:bg-blue-100">
+                    ${historyHtml}
+
+                    <div class="flex items-center justify-between gap-3 pt-2">
+                        <div class="flex gap-3">
+                            <button onclick="openJobModal(${job.id})" class="btn-touch bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center px-4 font-bold active:bg-blue-100">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
-                                <span>Editar</span>
                             </button>
-                            
-                            <button onclick="deleteJob(${job.id})" class="btn-touch bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl flex items-center gap-2 px-4 font-bold border border-red-100 dark:border-red-900/50 active:bg-red-100">
+                            <button onclick="deleteJob(${job.id})" class="btn-touch bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl flex items-center px-4 font-bold active:bg-red-100">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                             </button>
                         </div>
-
                         ${!isPaid ? `
-                        <button onclick="openPaymentModal(${job.id})" class="flex-1 btn-touch bg-green-600 text-white rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-green-200 dark:shadow-none active:bg-green-700">
+                        <button onclick="openPaymentModal(${job.id})" class="flex-1 btn-touch bg-green-600 text-white rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg active:bg-green-700">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -300,8 +334,8 @@
             });
 
             document.getElementById('totalBilled').innerText = formatCurrency(tBilled);
-            document.getElementById('totalPaid').innerText = formatCurrency(tPaid);
-            document.getElementById('totalBalance').innerText = formatCurrency(tBilled - tPaid);
+            document.getElementById('totalPaid').innerText = formatCurrency(tPaidTotal);
+            document.getElementById('totalBalance').innerText = formatCurrency(tBilled - tPaidTotal);
         }
 
         window.onload = render;
