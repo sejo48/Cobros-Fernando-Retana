@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +15,11 @@
         input, select, textarea { font-size: 16px !important; }
         .btn-touch { min-height: 48px; min-width: 48px; display: flex; align-items: center; justify-content: center; }
         .history-item:last-child { border-bottom: none; }
+        
+        /* Asegurar que el scrollbar también se vea bien en oscuro */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen p-3 md:p-8 transition-colors duration-300">
@@ -27,7 +32,7 @@
                     <p class="text-sm text-gray-500 dark:text-gray-400">Registro histórico de deudas</p>
                 </div>
                 <button onclick="toggleDarkMode()" class="p-3 bg-gray-200 dark:bg-gray-700 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition btn-touch">
-                    <span id="themeIcon">🌙</span>
+                    <span id="themeIcon">☀️</span>
                 </button>
             </div>
             <button onclick="openJobModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold shadow-lg transition active:scale-95 text-lg">
@@ -54,10 +59,10 @@
         <div id="jobsContainer" class="space-y-4 pb-20"></div>
     </div>
 
-    <!-- Modal Nuevo/Editar Trabajo -->
-    <div id="jobModal" class="hidden fixed inset-0 bg-black/70 flex items-end md:items-center justify-center p-0 md:p-4 z-50">
+    <!-- Modal Nuevo/Editar Registro -->
+    <div id="jobModal" class="hidden fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-0 md:p-4 z-50">
         <div class="bg-white dark:bg-gray-800 rounded-t-3xl md:rounded-2xl p-6 w-full max-w-md shadow-2xl overflow-y-auto max-h-[90vh]">
-            <h2 id="modalTitle" class="text-xl font-bold mb-4 dark:text-white border-b pb-2">Registrar Deuda</h2>
+            <h2 id="modalTitle" class="text-xl font-bold mb-4 dark:text-white border-b dark:border-gray-700 pb-2">Registrar Deuda</h2>
             <form id="jobForm" class="space-y-4">
                 <input type="hidden" id="editJobId">
                 <div>
@@ -87,9 +92,9 @@
     </div>
 
     <!-- Modal para Abonos -->
-    <div id="paymentModal" class="hidden fixed inset-0 bg-black/70 flex items-end md:items-center justify-center p-0 md:p-4 z-50">
+    <div id="paymentModal" class="hidden fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-0 md:p-4 z-50">
         <div class="bg-white dark:bg-gray-800 rounded-t-3xl md:rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h2 class="text-xl font-bold mb-4 dark:text-white border-b pb-2 text-green-600">Registrar Nuevo Abono</h2>
+            <h2 class="text-xl font-bold mb-4 dark:text-white border-b dark:border-gray-700 pb-2 text-green-600">Registrar Nuevo Abono</h2>
             <form id="paymentForm" class="space-y-4">
                 <input type="hidden" id="currentJobId">
                 <div>
@@ -163,7 +168,14 @@
             }
         }
 
-        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        // Lógica de inicio: Predeterminado oscuro si no hay preferencia guardada
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+            document.documentElement.classList.remove('dark');
+            const icon = document.getElementById('themeIcon');
+            if(icon) icon.innerText = '🌙';
+        } else {
+            // Predeterminado o preferencia oscura
             document.documentElement.classList.add('dark');
             const icon = document.getElementById('themeIcon');
             if(icon) icon.innerText = '☀️';
